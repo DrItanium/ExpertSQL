@@ -27,11 +27,16 @@
 ;------------------------------------------------------------------------------
 (defclass Clause (is-a HasAParent)
  (slot Previous (type SYMBOL INSTANCE-NAME INSTANCE-ADDRESS) 
-  (allowed-classes Clause))
+  (allowed-classes Clause Query))
  (slot Next (type SYMBOL INSTANCE-NAME INSTANCE-ADDRESS)
-  (allowed-classes Clause))
+  (allowed-classes Clause Query))
  (slot Action (type SYMBOL))
- (slot Value))
+ (multislot Value))
+
+
+(defclass Function (is-a HasAParent)
+ (slot FunctionName (type SYMBOL INSTANCE-NAME INSTANCE-ADDRESS))
+ (multislot Value (allowed-classes Clause Query)))
 
 ;(defgeneric make-clause "Creates a new clause")
 (defmethod make-clause ((?Action SYMBOL) ?Value)
@@ -46,3 +51,27 @@
                                                  INSTANCE-ADDRESS))
  (make-instance of Clause (Action ?Action) (Value ?Value) (Next ?Next)
   (Previous nil)))
+
+(defmethod make-function ((?Name SYMBOL) $?Value)
+ (make-instance of Function (FunctionName ?Name) (Value $?Value)))
+
+(defmethod SELECT (?Values (?Next SYMBOL INSTANCE-NAME INSTANCE-ADDRESS))
+ (make-clause SELECT ?Values ?Next))
+
+(defmethod SELECT (?Values)
+ (make-clause SELECT ?Values))
+
+(defmethod FROM (?Values (?Next SYMBOL INSTANCE-NAME INSTANCE-ADDRESS))
+ (make-clause FROM ?Values ?Next))
+
+(defmethod FROM (?Values) 
+ (make-clause FROM ?Values))
+
+(defmethod WHERE (?Values (?Next SYMBOL INSTANCE-NAME INSTANCE-ADDRESS))
+ (make-clause WHERE ?Values ?Next))
+
+(defmethod WHERE (?Values)
+ (make-clause WHERE ?Values ))
+
+(defmethod AVG (?Body)
+ (make-function AVG ?Body))
