@@ -28,3 +28,8 @@
 ; 
 ; Written by Joshua Scoggins (10/12/2012)
 ;------------------------------------------------------------------------------
+; The first thing that has to be done is to figure out a good system for
+; translating SQL commands to a series of facts and rules. The other thing that
+; has to be done is to develop a way to describe queries to be specifically
+; executed. 
+
