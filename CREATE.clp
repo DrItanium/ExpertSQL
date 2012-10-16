@@ -27,17 +27,33 @@
 ; Written by Joshua Scoggins (10/12/2012)
 ;------------------------------------------------------------------------------
 ;TODO: Add corresponding objects
+(defclass Column (is-a USER)
+ (slot Name (type SYMBOL))
+ (slot Type (type SYMBOL))
+ (multislot Definitions))
+(defclass VarCharColumn (is-a Column)
+ (slot Length (type NUMBER)))
+(defclass Table (is-a USER)
+ (slot Name (type SYMBOL))
+ (slot Temporary (type SYMBOL) (allowed-values FALSE TRUE))
+ (multislot Columns (type INSTANCE) (allowed-classes Column))
+ (slot RowClassName (type SYMBOL)))
+
+(defmessage-handler Table add-column (?column)
+ (slot-direct-insert$ Columns 1 ?column))
+(defclass TableRow (is-a USER))
+
 (defrule create-new-permanent-table
          ?f <- (CREATE TABLE ?name { $?contents })
-         (not (exists (object (is-a Table) (name (symbol-to-instance-name ?name)))))
+         (not (exists (object (is-a Table) (name ?name))))
          =>
          (retract ?f)
-         (bind ?className (make-instance ?name of Table))
+         (bind ?className (make-instance ?name of Table (Name ?name)))
          (assert (For ?className build $?contents)))
 
 (defrule create-new-temporary-table
          ?f <- (CREATE TEMPORARY TABLE ?name { $?contents })
-         (not (exists (object (is-a Table) (name (symbol-to-instance-name ?name)))))
+         (not (exists (object (is-a Table) (name ?name))))
          =>
          (retract ?f)
          (bind ?className (make-instance ?name of Table (Temporary TRUE)))
@@ -54,7 +70,7 @@
            (Name ?name) (Type ?type)
            (Definitions $?args)))
          (retract ?f)
-         (assert (For ?className build $?rest))
+         (assert (For ?className build $?rest)))
 
 (defrule shatter-column-imbue-varchar
          ?f <- (For ?className build ?name VARCHAR { ?size } $?args , $?rest)
@@ -67,7 +83,7 @@
            (Length ?size)
            (Definitions $?args)))
          (retract ?f)
-         (assert (For ?className build $?rest))
+         (assert (For ?className build $?rest)))
 
 (defrule retract-column-imbue-shatter
          ?f <- (For ?className build)
@@ -85,13 +101,44 @@
          (bind ?rowClassName (sym-cat entry-row- (instance-name-to-symbol
                                                ?className)))
          (modify-instance ?table (RowClassName ?rowClassName))
-         (make-instance of ClassBuilder (Name ?rowClassName)
-                           (For ?className) (Columns $columns)))
+         (make-instance of ClassBuilder (class-name ?rowClassName) 
+                                        (isa TableRow))
+         (retract ?f)
+         (assert (For ?rowClassName transform columns $?columns)))
+          
+                           ;(Columns $columns)))
+
+(defrule build-column-for-type
+ ?f <- (For ?rowClassName transform columns ?column $?rest)
+ ?objects <- (object (is-a ClassBuilder) (class-name ?rowClassName))
+ (object (is-a Column) (name ?column) (Name ?name) (Type ?type) 
+  (Definitions $?definitions))
+ =>
+ (retract ?f)
+ (assert (For ?rowClassName transform columns $?rest))
+ (slot-insert$ ?objects slots 1
+  (make-instance of ClassSlot 
+   (slot-name ?name)
+   (type (switch ?type
+          (case VARCHAR then STRING)
+          (case NUMBER then NUMBER)
+          (case FLOAT then FLOAT)
+          (default VARIABLE))))))
+
+(defrule build-column-for-type-retract
+ ?f <- (For ?n transform columns)
+ =>
+ (assert (Create type ?n))
+ (retract ?f))
+
+(defrule build-row-type
+ ?f <- (Create type ?n)
+ ?b <- (object (is-a ClassBuilder) (class-name ?n))
+ =>
+ (retract ?f)
+ (send ?b build)
+ (unmake-instance ?b))
+
 ;TODO: Convert each column to a corresponding slot for the target type
-;(defrule build-column-for-type
-; ?cb <- (object (is-a ClassBuilder) (Name ?rowClassName)
-;  (For ?className) (Columns ?first $?))
-; (object (is-a Column) (name ?first) 
-;  (Name ?name) (Type ?type) (
 
 
