@@ -1,2 +1,10 @@
 This library is an experiment of mine to see what it would take to for CLIPS to
 be able to read SQL statements given to it. 
+
+
+Another thing that you're going to need is the ClassBuilder library which can
+be acquired by running the following command
+
+git clone git://github.com/DrItanium/ClassBuilder.git ClassBuilder 
+
+in the root of this folder
